@@ -1,14 +1,15 @@
 package table
 
-import java.sql.{DriverManager, ResultSet}
+import java.sql.DriverManager
 import java.util.Properties
 
 import cn.hutool.db.DbUtil
-import com.fenglex.mysql.ResultHandler
-import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import org.apache.flink.streaming.api.functions.source.{RichSourceFunction, SourceFunction}
+import org.apache.flink.streaming.api.functions.source.SourceFunction
 import org.apache.flink.streaming.api.scala._
-import org.apache.flink.table.api.EnvironmentSettings
+import org.apache.flink.table.api.{EnvironmentSettings, FieldExpression, WithOperations}
+import org.apache.flink.table.api.bridge.scala.{StreamTableEnvironment, dataStreamConversions}
+import org.apache.flink.table.api.bridge.scala._
+import org.apache.flink.api.scala.{createTypeInformation, _}
 
 
 /**
@@ -24,6 +25,7 @@ object MysqlReader {
   def main(args: Array[String]): Unit = {
     val fsSettings = EnvironmentSettings.newInstance().useOldPlanner().inStreamingMode().build()
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    val tableEnv = StreamTableEnvironment.create(env, fsSettings)
     val properties = new Properties()
     properties.setProperty("username", "root")
     properties.setProperty("password", "lDwcgRITlBh71D1s")
@@ -31,9 +33,13 @@ object MysqlReader {
     properties.setProperty("sql",
       "select id,data_name,data_code,freq,create_time,update_time from tb_data_dict where id>'%s' order by id")
     properties.setProperty("limit", "10")
-    val stream = env.addSource(new MysqlSource(properties))
-    stream.print()
+    val stream: DataStream[DataDict] = env.addSource(new MysqlSource(properties))
+    //stream.print()
+    val tab = tableEnv.fromDataStream[DataDict](stream)
+    //tab.where($"id".eq("10"))
+    //println(queryResult)
     env.execute()
+    //tableEnv.execute("test")
   }
 
 }
@@ -68,8 +74,8 @@ class MysqlSource(property: Properties) extends SourceFunction[DataDict] {
         Thread.sleep(2000)
       }
       empty = false
-      Thread.sleep(5000)
       println("等待5秒钟,下次执行")
+      Thread.sleep(5000)
       connection.close()
     }
   }
