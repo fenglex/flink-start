@@ -1,6 +1,6 @@
 package table
 
-import org.apache.flink.connector.jdbc.table.JdbcTableSource
+
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 
 /**
